@@ -13,6 +13,15 @@ data HType : Type where
   TList : HType -> HType
 
 public export
+Eq HType where
+  TInt == TInt = True
+  TBool == TBool = True
+  (TTimes x1 y1) == (TTimes x2 y2) = x1 == x2 && y1 == y2
+  (TArrow x1 y1) == (TArrow x2 y2) = x1 == x2 && y1 == y2
+  (TList x1) == (TList x2) = x1 == x2
+  _ == _ = False
+
+public export
 data Expr : Type where
   Var : Name -> Expr
   EInt : Int -> Expr
