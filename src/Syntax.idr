@@ -1,8 +1,10 @@
 module Syntax
 
+public export
 Name : Type
 Name = String
 
+public export
 data HType : Type where
   TInt : HType
   TBool : HType
@@ -10,6 +12,7 @@ data HType : Type where
   TArrow : HType -> HType -> HType
   TList : HType -> HType
 
+public export
 data Expr : Type where
   Var : Name -> Expr
   EInt : Int -> Expr
@@ -37,6 +40,7 @@ data ToplevelCommand : Type where
   TlDef : Name -> Expr -> ToplevelCommand
   TlQuit : ToplevelCommand
 
+public export
 stringOfType : HType -> String
 stringOfType = toStr (-1)
   where
