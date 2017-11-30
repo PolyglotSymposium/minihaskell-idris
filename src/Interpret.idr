@@ -26,7 +26,7 @@ interp x (Var y) =
     Just v => Just v
     Nothing => runtimeError
 interp x (EInt y) = Just $ VInt y
-interp x (Bool y) = Just $ VBool y
+interp x (EBool y) = Just $ VBool y
 interp x (Times y z) =
   case (interp x y, interp x z) of
     (Just (VInt a), Just (VInt b)) => Just (VInt (a * b))

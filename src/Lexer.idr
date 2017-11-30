@@ -1,5 +1,6 @@
 module Lexer
 
+public export
 data Token : Type where
   INT : Int -> Token
   TBOOL : Token

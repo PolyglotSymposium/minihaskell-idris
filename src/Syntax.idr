@@ -25,7 +25,7 @@ public export
 data Expr : Type where
   Var : Name -> Expr
   EInt : Int -> Expr
-  Bool : Bool -> Expr
+  EBool : Bool -> Expr
   Times : Expr -> Expr -> Expr
   Divide : Expr -> Expr -> Expr
   Mod : Expr -> Expr -> Expr
@@ -44,6 +44,7 @@ data Expr : Type where
   Cons : Expr -> Expr -> Expr
   Match : Expr -> HType -> Expr -> Name -> Name -> Expr -> Expr
 
+public export
 data ToplevelCommand : Type where
   TlExpr : Expr -> ToplevelCommand
   TlDef : Name -> Expr -> ToplevelCommand
@@ -77,7 +78,7 @@ stringOfExpr = toStr (-1)
       where
         go : Expr -> (Int, String)
         go (EInt x) = (10, cast x)
-        go (Bool x) = (10, show x)
+        go (EBool x) = (10, show x)
         go (Var x) = (10, x)
         go (Pair x y) = (10, "(" ++ toStr 0 x ++ ", " ++ toStr 0 y ++ ")")
         go (ENil x) = (10, "[" ++ (stringOfType x) ++ "]")
@@ -110,7 +111,7 @@ removeAssoc sought ((key, e) :: rest) =
 substr : List (Name, Expr) -> Expr -> Maybe Expr
 substr xs (Var x) = lookup x xs
 substr xs e@(EInt _) = Just e
-substr xs e@(Bool _) = Just e
+substr xs e@(EBool _) = Just e
 substr xs e@(ENil x) = Just e
 substr xs (Times x y) = Times <$> substr xs x <*> substr xs y
 substr xs (Divide x y) = Divide <$> substr xs x <*> substr xs y
