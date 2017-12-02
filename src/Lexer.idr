@@ -69,6 +69,7 @@ number = unpack "0123456789"
 varRest : List Char
 varRest = varStart ++ number
 
+public export
 tokenize : String -> Maybe (List Token)
 tokenize = identFirst . unpack
   where
