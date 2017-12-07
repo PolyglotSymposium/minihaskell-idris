@@ -6,8 +6,11 @@ import Lexer
 import Parser
 import Interpret
 
-parse : String -> Maybe (List ToplevelCommand)
-parse text = fst <$> tokenize text >>= parseFile
+parse : String -> Either String (List ToplevelCommand)
+parse text =
+  case tokenize text of
+    Just toks => fst <$> parseFile toks
+    Nothing => Left "Tokenizer error"
 
 exec : Context -> Env -> ToplevelCommand -> IO (Maybe (Context, Env))
 exec ctx env (TlExpr e) =
@@ -27,7 +30,7 @@ exec ctx env (TlDef x e) =
          putStrLn $ concat ["val ", x, " : ", stringOfType ty]
          pure $ Just ((x, ty)::ctx, (x, VClosure env e)::env)
        _ => pure Nothing
-exec ctx env _ = pure Nothing
+exec _ _ _ = pure Nothing
 
 execAll : List ToplevelCommand -> IO ()
 execAll xs = go [] [] xs
@@ -50,6 +53,6 @@ main = do
               Left _ => putStrLn "Cannot read file"
               Right text =>
                              case parse text of
-                                  Just cmds => execAll cmds
-                                  _ => putStrLn "Parse error"
+                                  Right cmds => execAll cmds
+                                  Left e => putStrLn e
        _ => putStrLn "Needed some args"

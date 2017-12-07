@@ -1,5 +1,7 @@
 module Syntax
 
+%default total
+
 public export
 Name : Type
 Name = String

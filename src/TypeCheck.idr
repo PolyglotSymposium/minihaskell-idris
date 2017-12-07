@@ -4,6 +4,8 @@ import Syntax
 
 %access public export
 
+%default total
+
 typeError : Maybe a
 typeError = Nothing
 
@@ -14,7 +16,7 @@ mutual
   check : Context -> HType -> Expr -> Maybe ()
   check ctx ty e =
     case typeOf ctx e of
-      Just ty' => 
+      Just ty' =>
         if ty' /= ty
         then typeError
         else Just ()

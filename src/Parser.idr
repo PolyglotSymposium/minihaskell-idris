@@ -6,24 +6,24 @@ import Syntax
 %access public export
 
 Parser : Type -> Type
-Parser o = List Token -> Maybe (o, List Token)
+Parser o = List Token -> Either String (o, List Token)
 
-alt : List (Parser a) -> List Token -> Maybe (a, List Token)
-alt [] _ = Nothing
+alt : List (Parser a) -> Parser a
+alt [] _ = Left "No alternatives matched"
 alt (p :: ps) toks =
   case p toks of
-       e@(Just _) => e
+       e@(Right _) => e
        _ => alt ps toks
 
 many : Parser a -> Parser (List a)
 many p toks =
   case p toks of
-       (Just (r, [])) => Just ([r], [])
-       (Just (r, xs)) =>
-         case many p xs of
-           Just (rs, remainder) => Just (r::rs, remainder)
-           _ => Just ([r], xs)
-       _ => Just ([], toks)
+    (Right (r, [])) => Right ([r], [])
+    (Right (r, xs)) =>
+      case many p xs of
+        Right (rs, remainder) => Right (r::rs, remainder)
+        _ => Right ([r], xs)
+    _ => Right ([], toks)
 
 mutual
   expr : Parser Expr
@@ -32,126 +32,134 @@ mutual
   parenExpr : Parser Expr
   parenExpr (LPAREN::toks) =
     case expr toks of
-       Just (e, RPAREN::moreToks) => Just (e, moreToks)
-       _ => Nothing
-  parenExpr _ = Nothing
+       Right (e, RPAREN::moreToks) => Right (e, moreToks)
+       Right _ => Left "No closing paren"
+       Left e => Left e
+  parenExpr _ = Left "No open paren"
 
   pair : Parser Expr
   pair (LPAREN::toks) =
     case expr toks of
-       Just (e1, COMMA::toks') =>
+       Right (e1, COMMA::toks') =>
          case expr toks' of
-            Just (e2, RPAREN::finalToks) => Just (Pair e1 e2, finalToks)
-            _ => Nothing
-       _ => Nothing
-  pair _ = Nothing
+            Right (e2, RPAREN::finalToks) => Right (Pair e1 e2, finalToks)
+            Left e => Left e
+       Left e => Left e
+  pair _ = Left "No open paren"
 
   nonApp : Parser Expr
-  nonApp (VAR name::xs) = Just (Var name, xs)
-  nonApp (TRUE::xs) = Just (EBool True, xs)
-  nonApp (INT v::xs) = Just (EInt v, xs)
+  nonApp (VAR name::xs) = Right (Var name, xs)
+  nonApp (TRUE::xs) = Right (EBool True, xs)
+  nonApp (FALSE::xs) = Right (EBool False, xs)
+  nonApp (INT v::xs) = Right (EInt v, xs)
   nonApp x = alt [nil, parenExpr, pair] x
 
   app : Parser Expr
   app (FST::rest) = case nonApp rest of
-                         Just (e, rest) => Just (Fst e, rest)
-                         _ => Nothing
+                         Right (e, rest) => Right (Fst e, rest)
+                         Left e => Left e
   app (SND::rest) = case nonApp rest of
-                         Just (e, rest) => Just (Snd e, rest)
-                         _ => Nothing
+                         Right (e, rest) => Right (Snd e, rest)
+                         Left e => Left e
   app toks = case nonApp toks of
-                  Just (e, rest) => case nonApp rest of
-                                         Just (e2, remainder) => Just (Apply e e2, remainder)
-                                         _ => Nothing
+                  Right (e, rest) => case nonApp rest of
+                                         Right (e2, remainder) => Right (Apply e e2, remainder)
+                                         Left e => Left e
                   _ => case app toks of
-                                  Just (e, rest) => case nonApp rest of
-                                                         Just (e2, remainder) => Just (Apply e e2, remainder)
-                                                         _ => Nothing
-                                  _ => Nothing
+                                  Right (e, rest) => case nonApp rest of
+                                                         Right (e2, remainder) => Right (Apply e e2, remainder)
+                                                         Left e => Left e
+                                  Left e => Left e
 
   nil : Parser Expr
   nil (LBRACK::toks) =
     case ty toks of
-       Just (t, RBRACK::moreToks) => Just (ENil t, moreToks)
-       _ => Nothing
-  nil _ = Nothing
+       Right (t, RBRACK::moreToks) => Right (ENil t, moreToks)
+       Right _ => Left "No right bracket"
+       Left e => Left e
+  nil _ = Left "No left bracket"
 
   arith : Parser Expr
-  arith (MINUS::INT v::rest) = Just (EInt (-v), rest)
+  arith (MINUS::INT v::rest) = Right (EInt (-v), rest)
   arith toks =
     case expr toks of
-         Just (e1, PLUS::moreToks) =>
+         Right (e1, PLUS::moreToks) =>
                         case expr moreToks of
-                             Just (e2, finalToks) => Just (Plus e1 e2, finalToks)
-                             _ => Nothing
-         Just (e1, MINUS::moreToks) =>
+                             Right (e2, finalToks) => Right (Plus e1 e2, finalToks)
+                             Left e => Left e
+         Right (e1, MINUS::moreToks) =>
                         case expr moreToks of
-                             Just (e2, finalToks) => Just (Minus e1 e2, finalToks)
-                             _ => Nothing
-         Just (e1, TIMES::moreToks) =>
+                             Right (e2, finalToks) => Right (Minus e1 e2, finalToks)
+                             Left e => Left e
+         Right (e1, TIMES::moreToks) =>
                         case expr moreToks of
-                             Just (e2, finalToks) => Just (Times e1 e2, finalToks)
-                             _ => Nothing
-         Just (e1, DIVIDE::moreToks) =>
+                             Right (e2, finalToks) => Right (Times e1 e2, finalToks)
+                             Left e => Left e
+         Right (e1, DIVIDE::moreToks) =>
                         case expr moreToks of
-                             Just (e2, finalToks) => Just (Divide e1 e2, finalToks)
-
-                             _ => Nothing
-         Just (e1, MOD::moreToks) =>
+                             Right (e2, finalToks) => Right (Divide e1 e2, finalToks)
+                             Left e => Left e
+         Right (e1, MOD::moreToks) =>
                         case expr moreToks of
-                             Just (e2, finalToks) => Just (Mod e1 e2, finalToks)
-                             _ => Nothing
-         _ => Nothing
+                             Right (e2, finalToks) => Right (Mod e1 e2, finalToks)
+                             Left e => Left e
+         Left e => Left e
 
   boolean : Parser Expr
   boolean toks =
     case expr toks of
-         Just (e1, EQUAL::moreToks) =>
+         Right (e1, EQUAL::moreToks) =>
                         case expr moreToks of
-                             Just (e2, finalToks) => Just (Equal e1 e2, finalToks)
-                             _ => Nothing
-         Just (e1, LESS::moreToks) =>
+                             Right (e2, finalToks) => Right (Equal e1 e2, finalToks)
+                             Left e => Left e
+         Right (e1, LESS::moreToks) =>
                         case expr moreToks of
-                             Just (e2, finalToks) => Just (Less e1 e2, finalToks)
-                             _ => Nothing
-         _ => Nothing
+                             Right (e2, finalToks) => Right (Less e1 e2, finalToks)
+                             Left e => Left e
+         Right _ => Left "No boolean operator"
+         Left e => Left e
 
   cons : Parser Expr
   cons toks =
     case expr toks of
-         Just (e1, CONS::moreToks) =>
+         Right (e1, CONS::moreToks) =>
                         case expr moreToks of
-                             Just (e2, finalToks) => Just (Cons e1 e2, finalToks)
-                             _ => Nothing
-         _ => Nothing
+                             Right (e2, finalToks) => Right (Cons e1 e2, finalToks)
+                             Left e => Left e
+         Right _ => Left "No cons"
+         Left e => Left e
 
   ifElse : Parser Expr
   ifElse (IF::toks) =
     case expr toks of
-         Just (e1, THEN::moreToks) =>
-                        case expr moreToks of
-                             Just (e2, ELSE::yetMoreToks) =>
-                                             case expr yetMoreToks of
-                                                  Just (e3, finalToks) => Just (If e1 e2 e3, finalToks)
-                                                  _ => Nothing
-                             _ => Nothing
-         _ => Nothing
-  ifElse _ = Nothing
+      Right (e1, THEN::moreToks) =>
+        case expr moreToks of
+          Right (e2, ELSE::yetMoreToks) =>
+            case expr yetMoreToks of
+              Right (e3, finalToks) => Right (If e1 e2 e3, finalToks)
+              Left e => Left e
+          Right _ => Left "No else"
+          Left e => Left e
+      Right _ => Left "No then"
+      Left e => Left e
+  ifElse _ = Left "No if"
 
   tyListForReal : Parser HType
   tyListForReal toks =
     case tyList toks of
-      Just (t, TLIST::toks) => Just (TList t, toks)
-      _ => Nothing
+      Right (t, TLIST::toks) => Right (TList t, toks)
+      Right _ => Left "No Tlist"
+      Left e => Left e
 
   tySimple : Parser HType
-  tySimple (TBOOL::toks) = Just (TBool, toks)
-  tySimple (TINT::toks) = Just (TInt, toks)
+  tySimple (TBOOL::toks) = Right (TBool, toks)
+  tySimple (TINT::toks) = Right (TInt, toks)
   tySimple (LPAREN::toks) =
     case ty toks of
-      Just (t, RPAREN::toks) => Just (t, toks)
-      _ => Nothing
-  tySimple _ = Nothing
+      Right (t, RPAREN::toks) => Right (t, toks)
+      Right _ => Left "No closing paren"
+      Left e => Left e
+  tySimple _ = Left "No type starters"
 
   tyList : Parser HType
   tyList = alt [tySimple, tyListForReal]
@@ -159,11 +167,12 @@ mutual
   tyTimesForReal : Parser HType
   tyTimesForReal toks =
     case tyTimes toks of
-      Just (t1, TIMES::toks') =>
+      Right (t1, TIMES::toks') =>
         case tyTimes toks' of
-           Just (t2, finalToks) => Just (TTimes t1 t2, finalToks)
-           _ => Nothing
-      _ => Nothing
+           Right (t2, finalToks) => Right (TTimes t1 t2, finalToks)
+           Left e => Left e
+      Right _ => Left "No times"
+      Left e => Left e
 
   tyTimes : Parser HType
   tyTimes = alt [tyList, tyTimesForReal]
@@ -171,11 +180,12 @@ mutual
   arrow : Parser HType
   arrow toks =
     case tyTimes toks of
-      Just (t1, TARROW::toks') =>
+      Right (t1, TARROW::toks') =>
         case ty toks' of
-           Just (t2, finalToks) => Just (TArrow t1 t2, finalToks)
-           _ => Nothing
-      _ => Nothing
+           Right (t2, finalToks) => Right (TArrow t1 t2, finalToks)
+           Left e => Left e
+      Right _ => Left "No arrow"
+      Left e => Left e
 
   ty : Parser HType
   ty = alt [tyTimes, arrow]
@@ -183,57 +193,61 @@ mutual
   fun : Parser Expr
   fun (FUN::VAR name::COLON::toks) =
     case ty toks of
-         Just (t, DARROW::moreToks) =>
+         Right (t, DARROW::moreToks) =>
                         case expr moreToks of
-                             Just (e, finalToks) => Just (Fun name t e, finalToks)
-                             _ => Nothing
-         _ => Nothing
-  fun _ = Nothing
+                             Right (e, finalToks) => Right (Fun name t e, finalToks)
+                             Left e => Left e
+         Right _ => Left "No arrow"
+         Left e => Left e
+  fun _ = Left "No fun"
 
   rec : Parser Expr
   rec (REC::VAR name::COLON::toks) =
     case ty toks of
-         Just (t, IS::moreToks) =>
+         Right (t, IS::moreToks) =>
                         case expr moreToks of
-                             Just (e, finalToks) => Just (Rec name t e, finalToks)
-                             _ => Nothing
-         _ => Nothing
-  rec _ = Nothing
+                             Right (e, finalToks) => Right (Rec name t e, finalToks)
+                             Left e => Left e
+         Right _ => Left "No is"
+         Left e => Left e
+  rec _ = Left "No rec"
 
   match : Parser Expr
   match (MATCH::toks) =
     case expr toks of
-      Just (e1, WITH::toks') =>
+      Right (e1, WITH::toks') =>
         case nil toks' of
-          Just (ENil t, DARROW::toks'') =>
+          Right (ENil t, DARROW::toks'') =>
             case expr toks'' of
-              Just (e2, ALTERNATIVE::VAR n1::CONS::VAR n2::DARROW::toks''') =>
+              Right (e2, ALTERNATIVE::VAR n1::CONS::VAR n2::DARROW::toks''') =>
                 case expr toks''' of
-                  Just (e3, finalToks) => Just (Match e1 t e2 n1 n2 e3, finalToks)
-                  _ => Nothing
-              _ => Nothing
-          _ => Nothing
-      _ => Nothing
-  match _ = Nothing
+                  Right (e3, finalToks) => Right (Match e1 t e2 n1 n2 e3, finalToks)
+                  Left e => Left e
+              Left e => Left e
+          Left e => Left e
+      Left e => Left e
+  match _ = Left "No match"
 
 letTop : Parser ToplevelCommand
 letTop (LET::(VAR name)::EQUAL::rest) =
   case expr rest of
-       Just (e, SEMICOLON2::remainder) => Just (TlDef name e, remainder)
-       _ => Nothing
-letTop _ = Nothing
+       Right (e, SEMICOLON2::remainder) => Right (TlDef name e, remainder)
+       Right _ => Left "Missing ;;"
+       Left e => Left e
+letTop _ = Left "No let"
 
 exprTop : Parser ToplevelCommand
 exprTop toks =
   case expr toks of
-       Just (e, SEMICOLON2::remainder) => Just (TlExpr e, remainder)
-       _ => Nothing
+       Right (e, SEMICOLON2::remainder) => Right (TlExpr e, remainder)
+       Right _ => Left "Missing ;;"
+       Left e => Left e
 
 cmdTop : Parser ToplevelCommand
-cmdTop (QUIT::remainder) = Just (TlQuit, remainder)
-cmdTop _ = Nothing
+cmdTop (QUIT::remainder) = Right (TlQuit, remainder)
+cmdTop _ = Left "No command"
 
 parseFile : Parser (List ToplevelCommand)
-parseFile [] = Just ([], [])
+parseFile [] = Right ([], [])
 parseFile (x :: xs) =
   many (alt [letTop, exprTop, cmdTop]) (x :: xs)
