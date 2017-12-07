@@ -43,7 +43,9 @@ mutual
        Right (e1, COMMA::toks') =>
          case expr toks' of
             Right (e2, RPAREN::finalToks) => Right (Pair e1 e2, finalToks)
+            Right _ => Left "No left paren"
             Left e => Left e
+       Right _ => Left "No comma"
        Left e => Left e
   pair _ = Left "No open paren"
 
@@ -103,6 +105,7 @@ mutual
                         case expr moreToks of
                              Right (e2, finalToks) => Right (Mod e1 e2, finalToks)
                              Left e => Left e
+         Right _ => Left "No operator parsed"
          Left e => Left e
 
   boolean : Parser Expr
@@ -223,8 +226,11 @@ mutual
                 case expr toks''' of
                   Right (e3, finalToks) => Right (Match e1 t e2 n1 n2 e3, finalToks)
                   Left e => Left e
+              Right _ => Left "No alternative"
               Left e => Left e
+          Right _ => Left "No double arrow"
           Left e => Left e
+      Right _ => Left "No with"
       Left e => Left e
   match _ = Left "No match"
 
