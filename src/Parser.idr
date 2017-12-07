@@ -19,9 +19,10 @@ many : Parser a -> Parser (List a)
 many p toks =
   case p toks of
        (Just (r, [])) => Just ([r], [])
-       (Just (r, (x::xs))) => case many p xs of
-                                   Just (rs, remainder) => Just (r::rs, remainder)
-                                   _ => Just ([], toks)
+       (Just (r, xs)) =>
+         case many p xs of
+           Just (rs, remainder) => Just (r::rs, remainder)
+           _ => Just ([r], xs)
        _ => Just ([], toks)
 
 mutual
