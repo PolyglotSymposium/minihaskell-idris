@@ -2,6 +2,8 @@ module TypeCheck
 
 import Syntax
 
+%access public export
+
 typeError : Maybe a
 typeError = Nothing
 
@@ -21,7 +23,7 @@ mutual
   typeOf : Context -> Expr -> Maybe HType
   typeOf x (Var y) = lookup y x
   typeOf x (EInt y) = Just TInt
-  typeOf x (Bool y) = Just TBool
+  typeOf x (EBool y) = Just TBool
   typeOf x (ENil y) = Just $ TList y
   typeOf x (Times y z) = do
      _ <- check x TInt y

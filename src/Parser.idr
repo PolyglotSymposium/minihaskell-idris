@@ -3,6 +3,8 @@ module Parser
 import Lexer
 import Syntax
 
+%access public export
+
 Parser : Type -> Type
 Parser o = List Token -> Maybe (o, List Token)
 

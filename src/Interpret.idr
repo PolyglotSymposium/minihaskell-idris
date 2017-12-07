@@ -2,6 +2,8 @@ module Interpret
 
 import Syntax
 
+%access public export
+
 mutual
   data Value : Type where
     VInt : Int -> Value
