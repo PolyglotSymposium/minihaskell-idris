@@ -82,66 +82,67 @@ tokenize = identFirst . unpack
         ([], rest) => (0, rest)
         (xs, rest) => (cast (pack xs), rest)
 
-    go : List Char -> Maybe (List Token)
-    go [] = Just []
-    go ('\n' :: xs) = go xs
-    go ('\t' :: xs) = go xs
-    go (' ' :: xs) = go xs
-    go ('b'::'o'::'o'::'l'::xs) = ((::) TBOOL) <$> go xs
-    go ('e'::'l'::'s'::'e'::xs) = ((::) ELSE) <$> go xs
-    go ('f'::'a'::'l'::'s'::'e'::xs) = ((::) FALSE) <$> go xs
-    go ('f'::'s'::'t'::xs) = ((::) FST) <$> go xs
-    go ('f'::'u'::'n'::xs) = ((::) FUN) <$> go xs
-    go ('i'::'f'::xs) = ((::) IF) <$> go xs
-    go ('i'::'n'::'t'::xs) = ((::) TINT) <$> go xs
-    go ('i'::'s'::xs) = ((::) IS) <$> go xs
-    go ('l'::'e'::'t'::xs) = ((::) LET) <$> go xs
-    go ('l'::'i'::'s'::'t'::xs) = ((::) TLIST) <$> go xs
-    go ('m'::'a'::'t'::'c'::'h'::xs) = ((::) MATCH) <$> go xs
-    go ('r'::'e'::'c'::xs) = ((::) REC) <$> go xs
-    go ('s'::'n'::'d'::xs) = ((::) SND) <$> go xs
-    go ('t'::'h'::'e'::'n'::xs) = ((::) THEN) <$> go xs
-    go ('t'::'r'::'u'::'e'::xs) = ((::) TRUE) <$> go xs
-    go (':'::'q'::'u'::'i'::'t'::xs) = ((::) QUIT) <$> go xs
-    go ('w'::'i'::'t'::'t'::xs) = ((::) WITH) <$> go xs
-    go ('-'::'>'::xs) = ((::) TARROW) <$> go xs
-    go ('='::'>'::xs) = ((::) DARROW) <$> go xs
-    go (':'::':'::xs) = ((::) CONS) <$> go xs
-    go (';'::';'::xs) = ((::) SEMICOLON2) <$> go xs
-    go ('%'::xs) = ((::) MOD) <$> go xs
-    go ('('::xs) = ((::) LPAREN) <$> go xs
-    go (')'::xs) = ((::) RPAREN) <$> go xs
-    go ('*'::xs) = ((::) TIMES) <$> go xs
-    go ('+'::xs) = ((::) PLUS) <$> go xs
-    go (','::xs) = ((::) COMMA) <$> go xs
-    go ('-'::xs) = ((::) MINUS) <$> go xs
-    go ('/'::xs) = ((::) DIVIDE) <$> go xs
-    go (':'::xs) = ((::) COLON) <$> go xs
-    go ('<'::xs) = ((::) LESS) <$> go xs
-    go ('='::xs) = ((::) EQUAL) <$> go xs
-    go ('['::xs) = ((::) LBRACK) <$> go xs
-    go (']'::xs) = ((::) RBRACK) <$> go xs
-    go ('|'::xs) = ((::) ALTERNATIVE) <$> go xs
-    go (c::xs) =
-     if c `elem` number
-     then
-       let
-         (x, rest) = slurpNumber (c::xs)
-       in
-         ((::) (INT x)) <$> go rest
-     else Nothing
+    mutual
+      go : List Char -> Maybe (List Token)
+      go [] = Just []
+      go ('\n' :: xs) = identFirst xs
+      go ('\t' :: xs) = identFirst xs
+      go (' ' :: xs) = identFirst xs
+      go ('b'::'o'::'o'::'l'::xs) = ((::) TBOOL) <$> identFirst xs
+      go ('e'::'l'::'s'::'e'::xs) = ((::) ELSE) <$> identFirst xs
+      go ('f'::'a'::'l'::'s'::'e'::xs) = ((::) FALSE) <$> identFirst xs
+      go ('f'::'s'::'t'::xs) = ((::) FST) <$> identFirst xs
+      go ('f'::'u'::'n'::xs) = ((::) FUN) <$> identFirst xs
+      go ('i'::'f'::xs) = ((::) IF) <$> identFirst xs
+      go ('i'::'n'::'t'::xs) = ((::) TINT) <$> identFirst xs
+      go ('i'::'s'::xs) = ((::) IS) <$> identFirst xs
+      go ('l'::'e'::'t'::xs) = ((::) LET) <$> identFirst xs
+      go ('l'::'i'::'s'::'t'::xs) = ((::) TLIST) <$> identFirst xs
+      go ('m'::'a'::'t'::'c'::'h'::xs) = ((::) MATCH) <$> identFirst xs
+      go ('r'::'e'::'c'::xs) = ((::) REC) <$> identFirst xs
+      go ('s'::'n'::'d'::xs) = ((::) SND) <$> identFirst xs
+      go ('t'::'h'::'e'::'n'::xs) = ((::) THEN) <$> identFirst xs
+      go ('t'::'r'::'u'::'e'::xs) = ((::) TRUE) <$> identFirst xs
+      go (':'::'q'::'u'::'i'::'t'::xs) = ((::) QUIT) <$> identFirst xs
+      go ('w'::'i'::'t'::'t'::xs) = ((::) WITH) <$> identFirst xs
+      go ('-'::'>'::xs) = ((::) TARROW) <$> identFirst xs
+      go ('='::'>'::xs) = ((::) DARROW) <$> identFirst xs
+      go (':'::':'::xs) = ((::) CONS) <$> identFirst xs
+      go (';'::';'::xs) = ((::) SEMICOLON2) <$> identFirst xs
+      go ('%'::xs) = ((::) MOD) <$> identFirst xs
+      go ('('::xs) = ((::) LPAREN) <$> identFirst xs
+      go (')'::xs) = ((::) RPAREN) <$> identFirst xs
+      go ('*'::xs) = ((::) TIMES) <$> identFirst xs
+      go ('+'::xs) = ((::) PLUS) <$> identFirst xs
+      go (','::xs) = ((::) COMMA) <$> identFirst xs
+      go ('-'::xs) = ((::) MINUS) <$> identFirst xs
+      go ('/'::xs) = ((::) DIVIDE) <$> identFirst xs
+      go (':'::xs) = ((::) COLON) <$> identFirst xs
+      go ('<'::xs) = ((::) LESS) <$> identFirst xs
+      go ('='::xs) = ((::) EQUAL) <$> identFirst xs
+      go ('['::xs) = ((::) LBRACK) <$> identFirst xs
+      go (']'::xs) = ((::) RBRACK) <$> identFirst xs
+      go ('|'::xs) = ((::) ALTERNATIVE) <$> identFirst xs
+      go (c::xs) =
+       if c `elem` number
+       then
+         let
+           (x, rest) = slurpNumber (c::xs)
+         in
+           ((::) (INT x)) <$> identFirst rest
+       else Nothing
 
-    identFirst : List Char -> Maybe (List Token)
-    identFirst [] = Just []
-    identFirst (x :: xs) =
-     if x `elem` varStart
-     then
-       let
-         (varRest, rest) = slurpVarRest xs
-         name = pack (x::varRest)
-       in
-         if name `elem` keywords
-         then go (x::xs)
-         else ((::) (VAR name)) <$> go rest
-     else
-       go (x::xs)
+      identFirst : List Char -> Maybe (List Token)
+      identFirst [] = Just []
+      identFirst (x :: xs) =
+       if x `elem` varStart
+       then
+         let
+           (varRest, rest) = slurpVarRest xs
+           name = pack (x::varRest)
+         in
+           if name `elem` keywords
+           then go (x::xs)
+           else ((::) (VAR name)) <$> go rest
+       else
+         go (x::xs)

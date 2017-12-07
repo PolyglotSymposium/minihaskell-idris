@@ -16,14 +16,13 @@ alt (p :: ps) toks =
        _ => alt ps toks
 
 many : Parser a -> Parser (List a)
-many p =
-  \toks =>
-          case p toks of
-               (Just (r, [])) => Just ([r], [])
-               (Just (r, (x::xs))) => case many p xs of
-                                           Nothing => Just ([], toks)
-                                           Just (rs, remainder) => Just (r::rs, remainder)
-               Nothing => Just ([], toks)
+many p toks =
+  case p toks of
+       (Just (r, [])) => Just ([r], [])
+       (Just (r, (x::xs))) => case many p xs of
+                                   Just (rs, remainder) => Just (r::rs, remainder)
+                                   _ => Just ([], toks)
+       _ => Just ([], toks)
 
 mutual
   expr : Parser Expr
@@ -55,19 +54,19 @@ mutual
   app : Parser Expr
   app (FST::rest) = case nonApp rest of
                          Just (e, rest) => Just (Fst e, rest)
-                         Nothing => Nothing
+                         _ => Nothing
   app (SND::rest) = case nonApp rest of
                          Just (e, rest) => Just (Snd e, rest)
-                         Nothing => Nothing
+                         _ => Nothing
   app toks = case nonApp toks of
                   Just (e, rest) => case nonApp rest of
                                          Just (e2, remainder) => Just (Apply e e2, remainder)
-                                         Nothing => Nothing
-                  Nothing => case app toks of
+                                         _ => Nothing
+                  _ => case app toks of
                                   Just (e, rest) => case nonApp rest of
                                                          Just (e2, remainder) => Just (Apply e e2, remainder)
-                                                         Nothing => Nothing
-                                  Nothing => Nothing
+                                                         _ => Nothing
+                                  _ => Nothing
 
   nil : Parser Expr
   nil (LBRACK::toks) =
@@ -133,7 +132,7 @@ mutual
                              Just (e2, ELSE::yetMoreToks) =>
                                              case expr yetMoreToks of
                                                   Just (e3, finalToks) => Just (If e1 e2 e3, finalToks)
-                                                  Nothing => Nothing
+                                                  _ => Nothing
                              _ => Nothing
          _ => Nothing
   ifElse _ = Nothing
@@ -142,7 +141,7 @@ mutual
   tyListForReal toks =
     case tyList toks of
       Just (t, TLIST::toks) => Just (TList t, toks)
-      Nothing => Nothing
+      _ => Nothing
 
   tySimple : Parser HType
   tySimple (TBOOL::toks) = Just (TBool, toks)
@@ -150,7 +149,8 @@ mutual
   tySimple (LPAREN::toks) =
     case ty toks of
       Just (t, RPAREN::toks) => Just (t, toks)
-      Nothing => Nothing
+      _ => Nothing
+  tySimple _ = Nothing
 
   tyList : Parser HType
   tyList = alt [tySimple, tyListForReal]
@@ -162,7 +162,7 @@ mutual
         case tyTimes toks' of
            Just (t2, finalToks) => Just (TTimes t1 t2, finalToks)
            _ => Nothing
-      Nothing => Nothing
+      _ => Nothing
 
   tyTimes : Parser HType
   tyTimes = alt [tyList, tyTimesForReal]
@@ -174,7 +174,7 @@ mutual
         case ty toks' of
            Just (t2, finalToks) => Just (TArrow t1 t2, finalToks)
            _ => Nothing
-      Nothing => Nothing
+      _ => Nothing
 
   ty : Parser HType
   ty = alt [tyTimes, arrow]
@@ -209,7 +209,7 @@ mutual
               Just (e2, ALTERNATIVE::VAR n1::CONS::VAR n2::DARROW::toks''') =>
                 case expr toks''' of
                   Just (e3, finalToks) => Just (Match e1 t e2 n1 n2 e3, finalToks)
-                  Nothing => Nothing
+                  _ => Nothing
               _ => Nothing
           _ => Nothing
       _ => Nothing
@@ -220,11 +220,12 @@ letTop (LET::(VAR name)::EQUAL::rest) =
   case expr rest of
        Just (e, SEMICOLON2::remainder) => Just (TlDef name e, remainder)
        _ => Nothing
+letTop _ = Nothing
 
 exprTop : Parser ToplevelCommand
 exprTop toks =
   case expr toks of
-       Just (e, remainder) => Just (TlExpr e, remainder)
+       Just (e, SEMICOLON2::remainder) => Just (TlExpr e, remainder)
        _ => Nothing
 
 cmdTop : Parser ToplevelCommand

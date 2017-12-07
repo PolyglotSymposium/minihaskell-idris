@@ -19,13 +19,14 @@ exec ctx env (TlExpr e) =
                         putStrLn $ concat $ intersperse "\n" $ printResult 20 v
                         putStrLn $ "@."
                         pure (Just (ctx, env))
-                      Nothing => pure Nothing
+                      _ => pure Nothing
+       _ => pure Nothing
 exec ctx env (TlDef x e) =
   case typeOf ctx e of
        Just ty => do
          putStrLn $ concat ["val ", x, " : ", stringOfType ty]
          pure $ Just ((x, ty)::ctx, (x, VClosure env e)::env)
-       Nothing => pure Nothing
+       _ => pure Nothing
 exec ctx env _ = pure Nothing
 
 execAll : List ToplevelCommand -> IO ()
@@ -36,8 +37,8 @@ execAll xs = go [] [] xs
     go env ctx (c :: cmds) = do
       r <- exec ctx env c
       case r of
-           Nothing => pure ()
-           (Just (ctx', env')) => go env' ctx' cmds
+           Just (ctx', env') => go env' ctx' cmds
+           _ => pure ()
 
 main : IO ()
 main = do
@@ -46,9 +47,9 @@ main = do
        _::file::[] => do
          res <- readFile file
          case res of
-              (Left _) => putStrLn "Cannot read file"
-              (Right text) =>
+              Left _ => putStrLn "Cannot read file"
+              Right text =>
                              case parse text of
                                   Just cmds => execAll cmds
-                                  Nothing => putStrLn "Parse error"
+                                  _ => putStrLn "Parse error"
        _ => putStrLn "Needed some args"
