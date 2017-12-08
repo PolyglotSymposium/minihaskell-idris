@@ -3,31 +3,43 @@ module Parser
 import Lexer
 import Syntax
 
+import Debug.Trace
+
 %access public export
 
 Parser : Type -> Type
 Parser o = List Token -> Either String (o, List Token)
 
-alt : List (Parser a) -> Parser a
-alt [] _ = Left "No alternatives matched"
-alt (p :: ps) toks =
-  case p toks of
-       e@(Right _) => e
-       _ => alt ps toks
-
-many : Parser a -> Parser (List a)
-many p toks =
-  case p toks of
-    (Right (r, [])) => Right ([r], [])
-    (Right (r, xs)) =>
-      case many p xs of
-        Right (rs, remainder) => Right (r::rs, remainder)
-        _ => Right ([r], xs)
-    _ => Right ([], toks)
-
 mutual
   expr : Parser Expr
-  expr = alt [nonApp, app, arith, boolean, cons, ifElse, fun, rec, match]
+  expr toks =
+    case trace "here1" $ nonApp toks of
+      Left _ =>
+        case trace "here2" $ app toks of
+          Left _ =>
+            case trace "here6" $ ifElse toks of
+              Left _ =>
+                case trace "here7" $ fun toks of
+                  Left _ =>
+                    case trace "here8" $ rec toks of
+                      Left _ =>
+                        case trace "here3" $ arith toks of
+                          Left _ =>
+                            case trace "here4" $ boolean toks of
+                              Left _ =>
+                                case trace "here5" $ cons toks of
+                                  Left _ =>
+                                    case trace "here9" $ match toks of
+                                      Left _ => Left "Could not parse valid expression"
+                                      v => v
+                                  v => v
+                              v => v
+                          v => v
+                      v => v
+                  v => v
+              v => v
+          v => v
+      v => v
 
   parenExpr : Parser Expr
   parenExpr (LPAREN::toks) =
@@ -54,7 +66,16 @@ mutual
   nonApp (TRUE::xs) = Right (EBool True, xs)
   nonApp (FALSE::xs) = Right (EBool False, xs)
   nonApp (INT v::xs) = Right (EInt v, xs)
-  nonApp x = alt [nil, parenExpr, pair] x
+  nonApp toks =
+    case trace "there1" $ nil toks of
+      Left _ =>
+        case trace "there2" $ parenExpr toks of
+          Left _ =>
+            case trace "there3" $ pair toks of
+              Left _ => Left "Could not parse non-application expr"
+              v => v
+          v => v
+      v => v
 
   app : Parser Expr
   app (FST::rest) = case nonApp rest of
@@ -63,15 +84,13 @@ mutual
   app (SND::rest) = case nonApp rest of
                          Right (e, rest) => Right (Snd e, rest)
                          Left e => Left e
-  app toks = case nonApp toks of
-                  Right (e, rest) => case nonApp rest of
-                                         Right (e2, remainder) => Right (Apply e e2, remainder)
-                                         Left e => Left e
-                  _ => case app toks of
-                                  Right (e, rest) => case nonApp rest of
-                                                         Right (e2, remainder) => Right (Apply e e2, remainder)
-                                                         Left e => Left e
-                                  Left e => Left e
+  app toks =
+    case trace "nap1" $ nonApp toks of
+      Right (e, rest) =>
+        case trace "nap3" $ nonApp rest of
+          Right (e2, remainder) => Right (Apply e e2, remainder)
+          Left e => Left e
+      Left e => Left e
 
   nil : Parser Expr
   nil (LBRACK::toks) =
@@ -165,7 +184,13 @@ mutual
   tySimple _ = Left "No type starters"
 
   tyList : Parser HType
-  tyList = alt [tySimple, tyListForReal]
+  tyList toks =
+    case tySimple toks of
+       Left _ =>
+        case tyListForReal toks of
+           Left _ => Left "Coult not parse inner list type"
+           v => v
+       v => v
 
   tyTimesForReal : Parser HType
   tyTimesForReal toks =
@@ -178,7 +203,13 @@ mutual
       Left e => Left e
 
   tyTimes : Parser HType
-  tyTimes = alt [tyList, tyTimesForReal]
+  tyTimes toks =
+    case tyList toks of
+      Left _ =>
+        case tyTimesForReal toks of
+          Left _ => Left "Could not parse list or times type"
+          v => v
+      v => v
 
   arrow : Parser HType
   arrow toks =
@@ -191,7 +222,13 @@ mutual
       Left e => Left e
 
   ty : Parser HType
-  ty = alt [tyTimes, arrow]
+  ty toks =
+    case tyTimes toks of
+      Left _ =>
+        case arrow toks of
+          Left _ => Left "Cannot parse type"
+          v => v
+      v => v
 
   fun : Parser Expr
   fun (FUN::VAR name::COLON::toks) =
@@ -255,5 +292,24 @@ cmdTop _ = Left "No command"
 
 parseFile : Parser (List ToplevelCommand)
 parseFile [] = Right ([], [])
-parseFile (x :: xs) =
-  many (alt [letTop, exprTop, cmdTop]) (x :: xs)
+parseFile toks =
+  case parseNext toks of
+       Right (cmd, rest) =>
+         case parseFile rest of
+              Right (cmds, []) => Right (cmd::cmds, [])
+              Right _ => Left "Expecting end of file"
+              Left e => Left e
+       Left e => Left e
+
+  where
+    parseNext : Parser ToplevelCommand
+    parseNext toks =
+      case letTop toks of
+        Left _ =>
+          case exprTop toks of
+            Left _ =>
+              case cmdTop toks of
+                Right (cmd, rest) => Right (cmd, rest)
+                Left e => Left "Could not parse valid top-level let, expr or command"
+            v => v
+        v => v
