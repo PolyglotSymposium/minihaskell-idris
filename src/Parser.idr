@@ -3,8 +3,6 @@ module Parser
 import Lexer
 import Syntax
 
-import Debug.Trace
-
 %access public export
 
 Parser : Type -> Type
@@ -13,23 +11,23 @@ Parser o = List Token -> Either String (o, List Token)
 mutual
   expr : Parser Expr
   expr toks =
-    case trace "here1" $ nonApp toks of
+    case nonApp toks of
       Left _ =>
-        case trace "here2" $ app toks of
+        case app toks of
           Left _ =>
-            case trace "here6" $ ifElse toks of
+            case ifElse toks of
               Left _ =>
-                case trace "here7" $ fun toks of
+                case fun toks of
                   Left _ =>
-                    case trace "here8" $ rec toks of
+                    case rec toks of
                       Left _ =>
-                        case trace "here3" $ arith toks of
+                        case arith toks of
                           Left _ =>
-                            case trace "here4" $ boolean toks of
+                            case boolean toks of
                               Left _ =>
-                                case trace "here5" $ cons toks of
+                                case cons toks of
                                   Left _ =>
-                                    case trace "here9" $ match toks of
+                                    case match toks of
                                       Left _ => Left "Could not parse valid expression"
                                       v => v
                                   v => v
@@ -67,11 +65,11 @@ mutual
   nonApp (FALSE::xs) = Right (EBool False, xs)
   nonApp (INT v::xs) = Right (EInt v, xs)
   nonApp toks =
-    case trace "there1" $ nil toks of
+    case nil toks of
       Left _ =>
-        case trace "there2" $ parenExpr toks of
+        case parenExpr toks of
           Left _ =>
-            case trace "there3" $ pair toks of
+            case pair toks of
               Left _ => Left "Could not parse non-application expr"
               v => v
           v => v
@@ -85,9 +83,9 @@ mutual
                          Right (e, rest) => Right (Snd e, rest)
                          Left e => Left e
   app toks =
-    case trace "nap1" $ nonApp toks of
+    case nonApp toks of
       Right (e, rest) =>
-        case trace "nap3" $ nonApp rest of
+        case nonApp rest of
           Right (e2, remainder) => Right (Apply e e2, remainder)
           Left e => Left e
       Left e => Left e
