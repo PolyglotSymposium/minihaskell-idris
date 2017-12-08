@@ -94,7 +94,8 @@ interp env (Match e1 _ e2 x y e3) =
 printResult : Nat -> Value -> List String
 printResult Z _ = ["..."]
 printResult (S k) (VInt x) = [show x]
-printResult (S k) (VBool x) = [show x]
+printResult (S k) (VBool True) = ["true"]
+printResult (S k) (VBool False) = ["false"]
 printResult (S k) (VNil x) = ["[" ++ stringOfType x ++ "]"]
 printResult (S k) (VClosure env (Cons e1 e2)) =
   case interp env e1 of
